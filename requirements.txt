@@ -1,0 +1,4 @@
+pydantic-settings
+aiogram==3.0.0b7
+pydantic==1.10.12
+APScheduler~=3.10.4
