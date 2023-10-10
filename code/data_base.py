@@ -80,17 +80,30 @@ class LocalDataBase:
         if date not in self[chat_id]:
             return
         self[chat_id].pop(date)
+        job_set = self._jobs[chat_id][date]["notification"]
+        job_clear = self._jobs[chat_id][date]["cleaner"]
+        self._scheduler.remove_job(job_id=job_set)
+        self._scheduler.remove_job(job_id=job_clear)
 
     def remove_event(self, chat_id: int, date: str, name):
         if chat_id not in self._data:
             return
         if date not in self[chat_id]:
             return
-        for curr_name, duration in self[chat_id][date]:
+        for curr_name in self[chat_id][date]:
             if curr_name == name:
                 self[chat_id][date].pop(name)
-                self.update_events(chat_id, date, self[chat_id][date])
+                if len(self[chat_id][date]) == 0:
+                    job_set = self._jobs[chat_id][date]["notification"]
+                    job_clear = self._jobs[chat_id][date]["cleaner"]
+                    self._scheduler.remove_job(job_id=job_set)
+                    self._scheduler.remove_job(job_id=job_clear)
+                    self[chat_id].pop(date)
+                else:
+                    #TODO пересборка по алгоритму
+                    self.update_events(chat_id, date, self[chat_id][date])
                 self._update_data()
+                break
 
     def _update_data(self) -> None:
         self.__update_file(self._data, "users_events.json")
@@ -147,13 +160,13 @@ class LocalDataBase:
         if date not in self._data[chat_id]:
             self._data[chat_id][date] = {}
         else:
-            job_set = self._jobs[chat_id][date]
-            job_clear = self._jobs[chat_id][date]
+            job_set = self._jobs[chat_id][date]["notification"]
+            job_clear = self._jobs[chat_id][date]["cleaner"]
             self._scheduler.remove_job(job_id=job_set)
             self._scheduler.remove_job(job_id=job_clear)
 
-        for name, time_duration in activities:
-            self._data[chat_id][date][name] = tuple(time_duration)
+        for name in activities:
+            self._data[chat_id][date][name] = activities[name]
 
         self._add_event_to_scheduler(self.__to_full_date(date, self.__notification_time), text, chat_id)
 
