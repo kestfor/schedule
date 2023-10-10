@@ -3,10 +3,41 @@ from aiogram.dispatcher.router import Router
 from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardButton, InlineKeyboardBuilder
-from states import AddActivityState, GetActivityOffset
+from states import AddActivityState, GetActivityOffset, ViewActivityState
 from data_base import db
+from aiogram.filters.callback_data import CallbackData
+from custom_datetime import DateTime
+import datetime
 
 router = Router()
+
+
+class DaysCallbackFactory(CallbackData, prefix="fabday"):
+    action: str
+    value: datetime.date
+
+
+def get_week_keyboard(action: str, start: int = None, full_weak: bool = True):
+    builder = InlineKeyboardBuilder()
+    week = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    week_rus = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
+    today = datetime.date.today()
+    if start is None:
+        start = today.isoweekday() - 1
+    if full_weak:
+        start += 1
+        today = today + datetime.timedelta(1)
+        for i in range(start, len(week) + start):
+            builder.button(text=week_rus[i % 7], callback_data=DaysCallbackFactory(action=action, value=today))
+            today = today + datetime.timedelta(1)
+        builder.button(text="в меню", callback_data="menu_callback")
+        builder.adjust(1)
+        return builder.as_markup()
+    else:
+        builder.button(text=week_rus[start], callback_data=DaysCallbackFactory(action=action, value=today))
+        builder.button(text="в меню", callback_data="menu_callback")
+        builder.adjust(1)
+        return builder.as_markup()
 
 
 @router.callback_query(F.data == "menu_callback")
@@ -18,16 +49,13 @@ async def menu_callback(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(F.data == "add_new_activity")
-async def add_new_activity(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Введите желаемую дату в формате дд.мм.гггг")
-    await state.set_state(AddActivityState.date)
-
-
-async def handle_empty_list(callback: CallbackQuery):
+async def handle_empty_list(callback: CallbackQuery, **kwargs):
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text='меню', callback_data="menu_callback"))
+    for key in kwargs:
+        builder.row(InlineKeyboardButton(text=key, callback_data=kwargs[key]))
+    builder.row(InlineKeyboardButton(text='меню', callback_data="menu_callback"))
     await callback.message.edit_text("здесь ничего нет", reply_markup=builder.as_markup())
+    await callback.answer()
 
 
 def sort_filter(string: str):
@@ -40,19 +68,30 @@ def sort_filter(string: str):
 
 
 @router.callback_query(F.data == 'view_activities')
-async def view_activities(callback: CallbackQuery, state: FSMContext):
-    data = []
-    user_id = callback.from_user.id
-    if user_id not in db.users:
-        await handle_empty_list(callback)
-        return
-    for item in db[user_id]:
-        date = item["date"]
-        time = item["time"]
-        name = item["name"]
-        data.append(name + '\n' + time + '\n' + date)
-    data.sort(key=lambda x: sort_filter(x))
-    await view_list(callback, state, data)
+async def view_activities_fab(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("выберите день недели", reply_markup=get_week_keyboard("view", full_weak=False))
+
+
+@router.callback_query(F.data == "add_new_activity")
+async def add_new_activity_fab(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("выберите день недели", reply_markup=get_week_keyboard("add"))
+
+
+@router.callback_query(DaysCallbackFactory.filter())
+async def callback_view_days(callback: CallbackQuery, state: FSMContext, callback_data: DaysCallbackFactory):
+    if callback_data.action == "view":
+        await state.set_state(ViewActivityState.view)
+        day = DateTime(callback_data.value)
+        await state.update_data(day=day)
+        await view_activities(callback, state)
+    elif callback_data.action == "add":
+        await state.set_state(AddActivityState.activity)
+        day = DateTime(callback_data.value)
+        await state.update_data(day=day)
+        text = ('Введите событие(я) в формате:\n'
+                '"название1" - "кол-во часов"\n'
+                '"название2" - "кол-во часов"')
+        await callback.message.edit_text(text)
 
 
 def get_offset(start, end, data):
@@ -91,3 +130,32 @@ async def get_next_data_offset(callback: CallbackQuery, state: FSMContext):
     start += 10
     end = min(end + 10, len(activities))
     await state.update_data(start=start, end=end)
+
+
+@router.callback_query(F.data == 'pick_another_day')
+async def pick_another_day(callback: CallbackQuery):
+    await callback.message.edit_text("Выберите день", reply_markup=get_week_keyboard("add"))
+
+
+@router.callback_query(F.data == 'check_another_day')
+async def pick_another_day(callback: CallbackQuery):
+    await callback.message.edit_text("Выберите день", reply_markup=get_week_keyboard("view", full_weak=False))
+
+
+async def view_activities(callback: CallbackQuery, state: FSMContext):
+    chat_id = callback.from_user.id
+    data = await state.get_data()
+    date = data["day"]
+    date_str = str(date)
+    if chat_id not in db.users:
+        db.add_new_user(chat_id)
+    if date_str not in db[chat_id]:
+        await handle_empty_list(callback, назад="check_another_day")
+        return
+    else:
+        activities = db.get_formatted_activities(chat_id, date_str)
+        builder = InlineKeyboardBuilder()
+        builder.button(text="назад", callback_data="check_another_day")
+        builder.button(text="в меню", callback_data="menu_callback")
+        builder.adjust(1)
+        await callback.message.edit_text(text=activities, reply_markup=builder.as_markup())

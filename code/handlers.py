@@ -3,12 +3,12 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.keyboard import InlineKeyboardButton
-from states import AddActivityState
-from aiogram import F
+from states import AddActivityState, ViewActivityState
 from aiogram.fsm.context import FSMContext
-import utils
-from events import Event
 from data_base import db
+from custom_datetime import DateTime
+from aiogram import F
+from utils import ActivitiesParser, alg
 
 
 router = Router()
@@ -30,43 +30,36 @@ async def menu_handler(message: Message):
     await message.answer("выбери действие", reply_markup=builder.as_markup())
 
 
-@router.message(AddActivityState.date, F.text)
-async def get_date_of_new_activity(message: Message, state: FSMContext):
-    date = message.text
-    if not utils.check_date_format(date):
-        await message.answer("Некорректная дата или формат даты\nВведите желаемую дату в формате дд.мм.гггг")
-        return
-    await state.update_data(date=date)
-    await message.answer("Введите время в 24 формате в виде чч:мм")
-    await state.set_state(AddActivityState.time)
-
-
-@router.message(AddActivityState.time, F.text)
-async def get_time_of_new_activity(message: Message, state: FSMContext):
-    time = message.text
-    data = await state.get_data()
-    date = data["date"]
-    if not utils.check_time_format(time):
-        await message.answer("Некорректное время или формат времени\nВведите время в 24 формате в виде чч:мм")
-        return
-    for event in db[message.from_user.id]:
-        if event["date"] == date and event["time"] == time:
-            await message.answer("Это время уже занято")
-            return
-    await state.update_data(time=time)
-    await message.answer("Введите название события")
-    await state.set_state(AddActivityState.activity)
-
-
 @router.message(AddActivityState.activity, F.text)
-async def get_name_of_new_activity(message: Message, state: FSMContext):
-    name = message.text
+async def add_new_activity(message: Message, state: FSMContext):
+    chat_id = message.from_user.id
+    activities = message.text
+    try:
+        new_activities: dict = ActivitiesParser.parse(activities)
+    except SyntaxError:
+        await message.answer("неверный формат")
+        return
     data = await state.get_data()
-    new_event = Event(data["date"], data["time"], name)
-    if message.from_user.id not in db.users:
-        db.add_new_user(message.from_user.id)
-    db.add_new_event(message.from_user.id, new_event)
-    await state.clear()
-    builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="меню", callback_data="menu_callback"))
-    await message.answer("Новое событие успешно добавлено", reply_markup=builder.as_markup())
+    date = data["day"]
+    date_str = str(date)
+    if chat_id not in db.users:
+        db.add_new_user(chat_id)
+    old_activities = {}
+    if date_str in db[chat_id]:
+        old_activities = db.get_activities(chat_id, date_str)
+        for activity, duration in old_activities.items():
+            old_activities[activity] = duration[-1] - duration[0]
+    full_day = old_activities | new_activities
+    # TODO алгоритмическая функция
+    try:
+        res = alg(full_day)
+    except OverflowError:
+        await state.clear()
+        builder = InlineKeyboardBuilder()
+        builder.button(text="выбрать другой день", callback_data="pick_another_day")
+        await message.answer("не хватает времени, выберите другой день", reply_markup=builder.as_markup())
+    else:
+        builder = InlineKeyboardBuilder()
+        builder.button(text="в меню", callback_data="menu_callback")
+        db.update_events(chat_id, date_str, full_day)
+        await message.answer("распорядок дня успешно изменен", reply_markup=builder.as_markup())

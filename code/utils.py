@@ -1,30 +1,31 @@
-import time
-import datetime
+class ActivitiesParser:
 
-
-def check_date_format(date: str) -> bool:
-    try:
-        valid_date = time.strptime(date, '%d.%m.%Y')
-        curr_date = str(datetime.datetime.now().date()).split('-')
-        curr_date.reverse()
-        date = date.split('.')
-        if curr_date[-1] > date[-1]:
-            return False
-        elif curr_date[-1] == date[-1] and curr_date[-2] > date[-2]:
-            return False
-        elif curr_date[-1] == date[-1] and curr_date[-2] == date[-2] and curr_date[0] > date[0]:
-            return False
-    except ValueError:
-        return False
-    else:
+    @staticmethod
+    def check_format(data: str) -> bool:
+        import re
+        for line in data.split('\n'):
+            line.strip()
+            if len(line) > 0:
+                match = re.fullmatch("[A-Za-zА-Яa-я ]* {0,}- {0,}\d", line)
+                if not match:
+                    return False
         return True
 
+    @staticmethod
+    def parse(data: str) -> dict:
+        if not ActivitiesParser.check_format(data):
+            raise SyntaxError("wrong string format")
+        lines = data.split('\n')
+        res = {}
+        for line in lines:
+            line.strip()
+            if len(line) > 0:
+                activity, time = line.split('-')
+                activity = activity.strip()
+                time = int(time.strip())
+                res[activity] = time
+        return res
 
-def check_time_format(time_to_check: str) -> bool:
-    try:
-        valid_time = time.strptime(time_to_check, '%H:%M')
-    except ValueError:
-        return False
-    else:
-        return True
 
+def alg(d: dict):
+    raise OverflowError
