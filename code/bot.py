@@ -6,13 +6,8 @@ import handlers
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from data_base import db
 
-bot = None
-scheduler = None
-
 
 async def main():
-    global bot
-    global scheduler
     token = config.bot_token.get_secret_value()
     bot = Bot(token=token)
     scheduler = AsyncIOScheduler()
