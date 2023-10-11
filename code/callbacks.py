@@ -23,7 +23,7 @@ class ActivitiesCallbackFactory(CallbackData, prefix="fabact"):
     name: str
 
 
-def get_week_keyboard(action: str, start: int = None, full_weak: bool = True):
+def get_week_keyboard(action: str, start: int = None, full_weak: bool = True, dash: bool = True):
     builder = InlineKeyboardBuilder()
     week = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     week_rus = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
@@ -31,8 +31,9 @@ def get_week_keyboard(action: str, start: int = None, full_weak: bool = True):
     if start is None:
         start = today.isoweekday() - 1
     if full_weak:
-        start += 1
-        today = today + datetime.timedelta(1)
+        if dash:
+            start += 1
+            today = today + datetime.timedelta(1)
         for i in range(start, len(week) + start):
             builder.button(text=week_rus[i % 7], callback_data=DaysCallbackFactory(action=action, value=today))
             today = today + datetime.timedelta(1)
@@ -75,7 +76,7 @@ def sort_filter(string: str):
 
 @router.callback_query(F.data == 'view_activities')
 async def view_activities_fab(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("выберите день недели", reply_markup=get_week_keyboard("view"))
+    await callback.message.edit_text("выберите день недели", reply_markup=get_week_keyboard("view", dash=False))
 
 
 @router.callback_query(F.data == "add_new_activity")
@@ -145,7 +146,7 @@ async def pick_another_day(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'check_another_day')
 async def pick_another_day(callback: CallbackQuery):
-    await callback.message.edit_text("Выберите день", reply_markup=get_week_keyboard("view"))
+    await callback.message.edit_text("Выберите день", reply_markup=get_week_keyboard("view", dash=False))
 
 
 async def view_activities(callback: CallbackQuery, state: FSMContext):

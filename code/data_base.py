@@ -5,6 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from apscheduler.job import Job
 from config_reader import config
 import os
+import utils
 import json
 
 
@@ -100,7 +101,10 @@ class LocalDataBase:
                     self._scheduler.remove_job(job_id=job_clear)
                     self[chat_id].pop(date)
                 else:
-                    #TODO пересборка по алгоритму
+                    tmp = {}
+                    for key in self[chat_id][date]:
+                        tmp[key] = self[chat_id][date][key][1] - self[chat_id][date][key][0]
+                    self[chat_id][date] = utils.get_schedule(tmp)
                     self.update_events(chat_id, date, self[chat_id][date])
                 self._update_data()
                 break

@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from data_base import db
 from custom_datetime import DateTime
 from aiogram import F
-from utils import ActivitiesParser, alg
+from utils import ActivitiesParser, get_schedule
 
 
 router = Router()
@@ -50,9 +50,8 @@ async def add_new_activity(message: Message, state: FSMContext):
         for activity, duration in old_activities.items():
             old_activities[activity] = duration[-1] - duration[0]
     full_day = old_activities | new_activities
-    # TODO алгоритмическая функция
     try:
-        res = alg(full_day)
+        res = get_schedule(full_day)
     except OverflowError:
         await state.clear()
         builder = InlineKeyboardBuilder()
@@ -61,5 +60,5 @@ async def add_new_activity(message: Message, state: FSMContext):
     else:
         builder = InlineKeyboardBuilder()
         builder.button(text="в меню", callback_data="menu_callback")
-        db.update_events(chat_id, date_str, full_day)
+        db.update_events(chat_id, date_str, res)
         await message.answer("распорядок дня успешно изменен", reply_markup=builder.as_markup())
