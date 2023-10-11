@@ -191,10 +191,10 @@ async def remove_activity(callback: CallbackQuery, state: FSMContext):
 async def handle_activity_callback_factory(callback: CallbackQuery, callback_data: ActivitiesCallbackFactory):
     if callback_data.action == "remove":
         db.remove_event(callback.from_user.id, callback_data.date, callback_data.name)
-        #TODO применить алгоритм для изменившихся данных
         builder = InlineKeyboardBuilder()
         builder.row(InlineKeyboardButton(text="назад", callback_data="check_another_day"))
         builder.row(InlineKeyboardButton(text="в меню", callback_data="menu_callback"))
-        await callback.message.edit_text(text=f'"{callback_data.name}" удалено из списка', reply_markup=builder.as_markup())
+        await callback.message.edit_text(text=f'"{callback_data.name}" удалено из списка',
+                                         reply_markup=builder.as_markup())
     else:
         await handle_empty_list(callback)

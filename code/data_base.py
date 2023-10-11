@@ -173,6 +173,7 @@ class LocalDataBase:
             self._data[chat_id][date][name] = activities[name]
 
         self._add_event_to_scheduler(self.__to_full_date(date, self.__notification_time), text, chat_id)
+        self._update_data()
 
 
 db = LocalDataBase()

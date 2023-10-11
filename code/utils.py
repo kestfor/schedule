@@ -67,5 +67,3 @@ def get_schedule(data: dict) -> dict:
     for item in res_list:
         res[item[0]] = item[1]
     return res
-
-

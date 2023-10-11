@@ -10,7 +10,6 @@ from custom_datetime import DateTime
 from aiogram import F
 from utils import ActivitiesParser, get_schedule
 
-
 router = Router()
 
 
