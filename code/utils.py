@@ -29,8 +29,8 @@ class ActivitiesParser:
 
 def get_schedule(data: dict) -> dict:
     res = {}
-    start = 8
-    end = 24
+    start = 10
+    end = 23
     full_time = end - start
     data_list = [(key, data[key]) for key in data]
     reserved_time = sum([item[-1] for item in data_list])

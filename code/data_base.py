@@ -161,7 +161,7 @@ class LocalDataBase:
 
     def get_formatted_activities(self, chat_id: int, date: str) -> str:
         activities = self.__get_text(self[chat_id][date])
-        return '\n'.join(activities)
+        return activities
 
     def update_events(self, chat_id, date: str, activities: dict):
         if chat_id not in self._data:
