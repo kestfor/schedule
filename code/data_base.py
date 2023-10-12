@@ -81,10 +81,13 @@ class LocalDataBase:
         if date not in self[chat_id]:
             return
         self[chat_id].pop(date)
-        job_set = self._jobs[chat_id][date]["notification"]
-        job_clear = self._jobs[chat_id][date]["cleaner"]
-        self._scheduler.remove_job(job_id=job_set)
-        self._scheduler.remove_job(job_id=job_clear)
+        try:
+            job_clear = self._jobs[chat_id][date]["cleaner"]
+            job_set = self._jobs[chat_id][date]["notification"]
+            self._scheduler.remove_job(job_id=job_set)
+            self._scheduler.remove_job(job_id=job_clear)
+        except Exception as err:
+            print(err)
 
     def remove_event(self, chat_id: int, date: str, name):
         if chat_id not in self._data:
@@ -95,10 +98,13 @@ class LocalDataBase:
             if curr_name == name:
                 self[chat_id][date].pop(name)
                 if len(self[chat_id][date]) == 0:
-                    job_set = self._jobs[chat_id][date]["notification"]
-                    job_clear = self._jobs[chat_id][date]["cleaner"]
-                    self._scheduler.remove_job(job_id=job_set)
-                    self._scheduler.remove_job(job_id=job_clear)
+                    try:
+                        job_clear = self._jobs[chat_id][date]["cleaner"]
+                        job_set = self._jobs[chat_id][date]["notification"]
+                        self._scheduler.remove_job(job_id=job_set)
+                        self._scheduler.remove_job(job_id=job_clear)
+                    except Exception as err:
+                        print(err)
                     self[chat_id].pop(date)
                 else:
                     tmp = {}
@@ -147,7 +153,7 @@ class LocalDataBase:
             text.append([name, tuple(duration)])
         text.sort(key=lambda x: x[-1])
         text = [f"{item[0]} с {item[1][0]} до {item[1][1]}" for item in text]
-        return text
+        return '\n'.join(text)
 
     def get_activities(self, chat_id: int, date: str):
         res = self[chat_id][date].copy()
@@ -161,13 +167,17 @@ class LocalDataBase:
         if chat_id not in self._data:
             self.add_new_user(chat_id)
         text = self.__get_text(activities)
+        text = "Распорядок дня на сегодня\n" + text
         if date not in self._data[chat_id]:
             self._data[chat_id][date] = {}
         else:
-            job_set = self._jobs[chat_id][date]["notification"]
-            job_clear = self._jobs[chat_id][date]["cleaner"]
-            self._scheduler.remove_job(job_id=job_set)
-            self._scheduler.remove_job(job_id=job_clear)
+            try:
+                job_clear = self._jobs[chat_id][date]["cleaner"]
+                job_set = self._jobs[chat_id][date]["notification"]
+                self._scheduler.remove_job(job_id=job_set)
+                self._scheduler.remove_job(job_id=job_clear)
+            except Exception as err:
+                print(err)
 
         for name in activities:
             self._data[chat_id][date][name] = activities[name]

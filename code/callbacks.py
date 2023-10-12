@@ -23,7 +23,7 @@ class ActivitiesCallbackFactory(CallbackData, prefix="fabact"):
     name: str
 
 
-def get_week_keyboard(action: str, start: int = None, full_weak: bool = True, dash: bool = True):
+def get_week_keyboard(action: str, start: int = None, full_weak: bool = True, dash: bool = False):
     builder = InlineKeyboardBuilder()
     week = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     week_rus = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
