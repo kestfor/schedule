@@ -27,7 +27,7 @@ class ActivitiesParser:
         return res
 
 
-def get_schedule(data: dict) -> dict:
+def get_schedule(data: dict[str: int]) -> dict[str: list[int, int]]:
     res = {}
     start = 10
     end = 23
@@ -67,3 +67,11 @@ def get_schedule(data: dict) -> dict:
     for item in res_list:
         res[item[0]] = item[1]
     return res
+
+
+if __name__ == "__main__":
+    data = {}
+    result = get_schedule(data)
+    # The result should be an empty dictionary since there are no events.
+    assert result == {}
+
