@@ -73,10 +73,10 @@ def sort_filter(string: str):
     info[-1] = tmp
     return tuple([info[-1], info[-2], info[-3]])
 
-
-# @router.callback_query(F.data == 'view_activities')
-# async def view_activities_fab(callback: CallbackQuery, state: FSMContext):
-#     await callback.message.edit_text("выберите день недели", reply_markup=get_week_keyboard("view", dash=False))
+#TODO
+@router.callback_query(F.data == 'view_activities')
+async def view_activities_fab(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("выберите день недели", reply_markup=get_week_keyboard("view", dash=False))
 
 @router.callback_query(F.data == 'view_activities')
 async def view_activities_fab(callback: CallbackQuery, state: FSMContext):
@@ -127,15 +127,16 @@ async def view_activities(callback: CallbackQuery, state: FSMContext):
         db.add_new_user(chat_id)
     if date_str not in db[chat_id] or len(db.get_activities(chat_id, date_str)) == 0:
         #TODO испровить если показывать всю неделю
-        # await handle_empty_list(callback, назад="check_another_day")
+        #await handle_empty_list(callback, назад="check_another_day")
         await handle_empty_list(callback)
         return
     else:
         activities = db.get_formatted_activities(chat_id, date_str)
         builder = InlineKeyboardBuilder()
-        builder.button(text='удалить занятие', callback_data="remove_activity")
+        # TODO испровить если есть возможность удалять
+        # builder.button(text='удалить занятие', callback_data="remove_activity")
         # TODO испровить если показывать всю неделю
-        # builder.button(text="назад", callback_data="check_another_day")
+        builder.button(text="назад", callback_data="check_another_day")
         builder.button(text="в меню", callback_data="menu_callback")
         builder.adjust(1)
         await callback.message.edit_text(text=activities, reply_markup=builder.as_markup())
@@ -154,7 +155,7 @@ async def remove_activity(callback: CallbackQuery, state: FSMContext):
                                                                               name=activity,
                                                                               date=date_str))
     # TODO испровить если показывать всю неделю
-    # builder.button(text='назад', callback_data="check_another_day")
+    builder.button(text='назад', callback_data="check_another_day")
     builder.button(text="в меню", callback_data="menu_callback")
     builder.adjust(1)
     await callback.message.edit_text("выберите активность", reply_markup=builder.as_markup())
@@ -166,7 +167,7 @@ async def handle_activity_callback_factory(callback: CallbackQuery, callback_dat
         db.remove_event(callback.from_user.id, callback_data.date, callback_data.name)
         builder = InlineKeyboardBuilder()
         # TODO испровить если показывать всю неделю
-        # builder.row(InlineKeyboardButton(text="назад", callback_data="check_another_day"))
+        builder.row(InlineKeyboardButton(text="назад", callback_data="remove_activity"))
         builder.row(InlineKeyboardButton(text="в меню", callback_data="menu_callback"))
         await callback.message.edit_text(text=f'"{callback_data.name}" удалено из списка',
                                          reply_markup=builder.as_markup())
