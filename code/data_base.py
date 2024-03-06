@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import apscheduler.schedulers.asyncio
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from apscheduler.job import Job
@@ -22,7 +23,7 @@ class LocalDataBase:
         self._DATA_PATH = config.data_path.get_secret_value()
         self._data = self._load_data()
         self._jobs = {}
-        self._scheduler = None
+        self._scheduler: apscheduler.schedulers.asyncio.AsyncIOScheduler = None
         self._bot = None
 
     def add_bot(self, bot):
